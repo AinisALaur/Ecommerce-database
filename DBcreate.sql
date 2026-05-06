@@ -22,13 +22,10 @@ CREATE TABLE Preke(
     CONSTRAINT akcija_tinkama_preke
         CHECK (akcija >= 0 AND akcija <= 100),
 
-    CONSTRAINT likutis_tinkamas_preke
-        CHECK (likutis >= 0),
-
     CONSTRAINT i_admin_preke
         FOREIGN KEY (sukure_admin)
         REFERENCES Administratorius ON DELETE NO ACTION
-                                    ON UPDATE CASCADE 
+                                    ON UPDATE CASCADE     
 );
 
 CREATE TABLE Uzsakovas(
@@ -70,9 +67,6 @@ CREATE TABLE Uzsakymas(
         FOREIGN KEY (uzsakovo_id)
         REFERENCES Uzsakovas ON DELETE NO ACTION
                              ON UPDATE CASCADE
-
-
-    --  Check if uzsakovas exists
 );
 
 CREATE TABLE Krepselis(
@@ -106,3 +100,36 @@ WHERE akcija > 0;
 
 CREATE VIEW Vidutine_krepselio_suma
 AS SELECT ROUND(AVG(kiekis * dabartine_kaina), 2) FROM Krepselis;
+
+CREATE FUNCTION tikrinti_likuti()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.likutis < 0 THEN
+        RAISE EXCEPTION 'Likutis negali būti neigiamas';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER patikrinti_likuti
+BEFORE UPDATE OF likutis ON Preke
+FOR EACH ROW
+WHEN (NEW.likutis < 0)
+EXECUTE FUNCTION tikrinti_likuti();
+
+CREATE FUNCTION tikrinti_ar_egzistuoja_uzsakovas()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF ((SELECT COUNT(*) FROM Uzsakovas WHERE id = NEW.uzsakovo_id) = 0)
+    THEN
+        RAISE EXCEPTION 'Toks uzsakovo id neegzistuoja';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER patikrinti_ar_egzistuoja_uzsakovas
+BEFORE INSERT ON Uzsakymas
+FOR EACH ROW
+EXECUTE FUNCTION tikrinti_ar_egzistuoja_uzsakovas();
