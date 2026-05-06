@@ -1,14 +1,14 @@
 CREATE TABLE Administratorius(
-    id SMALLINT PRIMARY KEY 
-        GENERATED ALWAYS AS IDENTITY (START WITH 0 INCREMENT BY 1),
+    id SMALLINT PRIMARY KEY
+        GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
     vardas VARCHAR(20) not null,
-    el_adresas VARCHAR(60) not null,
+    el_adresas VARCHAR(60) unique not null,
     tel_nr VARCHAR(15) not null
 );
 
 CREATE TABLE Preke(
-    id INTEGER PRIMARY KEY 
-        GENERATED ALWAYS AS IDENTITY (START WITH 0 INCREMENT BY 1),
+    id INTEGER PRIMARY KEY
+        GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
     pavadinimas VARCHAR(20) not null,
     kategorija VARCHAR(20) not null,
     kaina DECIMAL(10, 2) not null,
@@ -33,10 +33,10 @@ CREATE TABLE Preke(
 
 CREATE TABLE Uzsakovas(
     id INTEGER PRIMARY KEY 
-        GENERATED ALWAYS AS IDENTITY (START WITH 0 INCREMENT BY 1),
+        GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
     vardas VARCHAR(20) not null,
     pavarde VARCHAR(20) not null,
-    el_adresas VARCHAR(60) not null,
+    el_adresas VARCHAR(60) unique not null,
     tel_nr VARCHAR(15) not null,
     miestas VARCHAR(15) not null,
     gatve VARCHAR(15) not null,
@@ -48,7 +48,7 @@ CREATE TABLE Uzsakovas(
 
 CREATE TABLE Uzsakymas(
     id SMALLINT PRIMARY KEY 
-        GENERATED ALWAYS AS IDENTITY (START WITH 0 INCREMENT BY 1),
+        GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
     uzsakovo_id INT not null,
     statusas VARCHAR(20) default 'Gautas',
     pateikimo_data TIMESTAMP not null,
@@ -70,6 +70,9 @@ CREATE TABLE Uzsakymas(
         FOREIGN KEY (uzsakovo_id)
         REFERENCES Uzsakovas ON DELETE NO ACTION
                              ON UPDATE CASCADE
+
+
+    --  Check if uzsakovas exists
 );
 
 CREATE TABLE Krepselis(
@@ -85,7 +88,6 @@ CREATE TABLE Krepselis(
     CONSTRAINT kaina_tinkama_krepselis
         CHECK (dabartine_kaina > 0),
 
-
     CONSTRAINT i_preke_krepselis
         FOREIGN KEY (prekes_id)
         REFERENCES Preke ON DELETE NO ACTION
@@ -96,3 +98,11 @@ CREATE TABLE Krepselis(
         REFERENCES Uzsakymas ON DELETE NO ACTION
                              ON UPDATE CASCADE
 );
+
+-- Prekiu (kurios turi akcija) kaina su akcija
+CREATE VIEW Prekiu_kaina_su_akcija
+AS SELECT id, pavadinimas, kategorija, ROUND(kaina * ((100 - akcija) / 100.0), 2) as "kaina su akcija", likutis FROM Preke
+WHERE akcija > 0;
+
+CREATE VIEW Vidutine_krepselio_suma
+AS SELECT ROUND(AVG(kiekis * dabartine_kaina), 2) FROM Krepselis;
