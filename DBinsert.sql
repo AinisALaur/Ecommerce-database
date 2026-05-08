@@ -1,8 +1,8 @@
 INSERT INTO Administratorius (vardas, el_adresas, tel_nr)
 VALUES 
-('Tomas', 'tomas@gmail.com', '+37012312312'),
-('Adomas', 'adomas@gmail.com', '+37012312321'),
-('Gabija', 'gabija@gmail.com', '+37012312399');
+('Tomas', 'tomas@gmail.com', '+37012312312'), -- 1
+('Adomas', 'adomas@gmail.com', '+37012312321'), -- 2
+('Gabija', 'gabija@gmail.com', '+37012312399'); -- 3
 
 INSERT INTO Preke (pavadinimas, kategorija, kaina, akcija, sukure_admin, likutis)
 VALUES 
@@ -20,13 +20,13 @@ VALUES
 
 INSERT INTO Uzsakovas (vardas, pavarde, tel_nr, el_adresas, miestas, gatve, namo_nr)
 VALUES
-('Juozas', 'Juozaukas', '+37012312393', 'juozas@gmail.com', 'Vilnius', 'Kauno', 12),
-('Kipras', 'Kiprauskas', '+37012312395', 'kipras@gmail.com', 'Panevezys', 'Savanoriu pr.', 147),
-('Arturas', 'Arturauskas', '+3701342391', 'arturas@gmail.com', 'Kaunas', 'Vilniaus', 17),
-('Paula', 'Paulauskaite', '+37012342399', 'paula@gmail.com', 'Siauliai', 'Saules', 24),
-('Greta', 'Gratauskaite', '+3702342395', 'greta@gmail.com', 'Vilnius', 'Zalgirio', 19);
+('Juozas', 'Juozaukas', '+37012312393', 'juozas@gmail.com', 'Vilnius', 'Kauno', 12), -- 1
+('Kipras', 'Kiprauskas', '+37012312395', 'kipras@gmail.com', 'Panevezys', 'Savanoriu pr.', 147), --2
+('Arturas', 'Arturauskas', '+3701342391', 'arturas@gmail.com', 'Kaunas', 'Vilniaus', 17), --3
+('Paula', 'Paulauskaite', '+37012342399', 'paula@gmail.com', 'Siauliai', 'Saules', 24), --4
+('Greta', 'Gratauskaite', '+3702342395', 'greta@gmail.com', 'Vilnius', 'Zalgirio', 19); --5
 
-INSERT INTO Uzsakymas (uzsakovo_id, pateikimo_data)
+INSERT INTO Uzsakymas(uzsakovo_id, pateikimo_data)
 VALUES
 (1, '2026-05-01 14:30:00'), -- 1
 (1, '2026-04-12 15:00:00'), -- 2
@@ -50,10 +50,69 @@ VALUES
 (3, 8, 2, 900),
 (10, 9, 1, 90);
 
-CREATE MATERIALIZED VIEW top_klientai
-AS SELECT u.id, u.vardas, u.pavarde, SUM(k.kiekis * k.dabartine_kaina) FROM Krepselis k
+CREATE MATERIALIZED VIEW klientu_sumos
+AS SELECT u.id, u.vardas, u.pavarde, SUM(k.kiekis * k.dabartine_kaina) as "Viso isleista" FROM Krepselis k
 JOIN Uzsakymas uz ON uz.id = k.uzsakymo_id
 JOIN Uzsakovas u ON u.id = uz.uzsakovo_id
 GROUP BY u.id, u.vardas, u.pavarde
 ORDER BY 1
-WITH DATA;
+WITH NO DATA;
+
+CREATE INDEX uzsakymo_data
+ON Uzsakymas(pateikimo_data);
+
+REFRESH MATERIALIZED VIEW klientu_sumos;
+
+UPDATE Uzsakymas SET patvirtino_admin = 1, patvirtinimo_data = '2026-05-02 14:30:00'
+WHERE Uzsakymas.id = 1;
+
+UPDATE Uzsakymas SET patvirtino_admin = 2, patvirtinimo_data = '2026-04-14 15:00:00'
+WHERE Uzsakymas.id = 2;
+
+UPDATE Uzsakymas SET patvirtino_admin = 3, patvirtinimo_data = '2026-03-26 16:30:00'
+WHERE Uzsakymas.id = 3;
+
+UPDATE Uzsakymas SET patvirtino_admin = 2, patvirtinimo_data = '2026-02-14 20:30:00'
+WHERE Uzsakymas.id = 4;
+
+UPDATE Uzsakymas SET patvirtino_admin = 3, patvirtinimo_data = '2026-01-31 18:00:00'
+WHERE Uzsakymas.id = 5;
+
+UPDATE Uzsakymas SET patvirtino_admin = 1, patvirtinimo_data = '2026-01-19 19:30:00'
+WHERE Uzsakymas.id = 6;
+
+UPDATE Uzsakymas SET patvirtino_admin = 2, patvirtinimo_data = '2025-11-10 20:00:00'
+WHERE Uzsakymas.id = 7;
+
+UPDATE Uzsakymas SET patvirtino_admin = 3, patvirtinimo_data = '2025-09-16 23:30:00'
+WHERE Uzsakymas.id = 8;
+
+UPDATE Uzsakymas SET patvirtino_admin = 2, patvirtinimo_data = '2025-05-22 22:00:00'
+WHERE Uzsakymas.id = 9;
+
+UPDATE Uzsakymas SET statusas = 'Pradetas'
+WHERE Uzsakymas.id = 1;
+
+UPDATE Uzsakymas SET statusas = 'Vykdomas'
+WHERE Uzsakymas.id = 2;
+
+UPDATE Uzsakymas SET statusas = 'Baigtas'
+WHERE Uzsakymas.id = 3;
+
+UPDATE Uzsakymas SET statusas = 'Vykdomas'
+WHERE Uzsakymas.id = 4;
+
+UPDATE Uzsakymas SET statusas = 'Baigtas'
+WHERE Uzsakymas.id = 5;
+
+UPDATE Uzsakymas SET statusas = 'Vykdomas'
+WHERE Uzsakymas.id = 6;
+
+UPDATE Uzsakymas SET statusas = 'Pradetas'
+WHERE Uzsakymas.id = 7;
+
+UPDATE Uzsakymas SET statusas = 'Vykdomas'
+WHERE Uzsakymas.id = 8;
+
+UPDATE Uzsakymas SET statusas = 'Baigtas'
+WHERE Uzsakymas.id = 9;
