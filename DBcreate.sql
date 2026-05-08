@@ -13,11 +13,11 @@ CREATE TABLE Preke(
     kategorija VARCHAR(20) not null,
     kaina DECIMAL(10, 2) not null,
     akcija DECIMAL(5, 2) default 0,
-    sukure_admin INT not null,
+    sukure_admin SMALLINT not null,
     likutis INT default 0,
 
     CONSTRAINT likutis_tinkamas
-        CHECK (likutis >= 0)
+        CHECK (likutis >= 0),
 
     CONSTRAINT kaina_tinkama_preke
         CHECK (kaina > 0),
@@ -52,7 +52,7 @@ CREATE TABLE Uzsakymas(
     uzsakovo_id INT not null,
     statusas VARCHAR(20) default 'Gautas',
     pateikimo_data TIMESTAMP not null,
-    patvirtino_admin INT,
+    patvirtino_admin SMALLINT,
     patvirtinimo_data TIMESTAMP,
 
     CONSTRAINT statusas_tinkamas_uzsakymas
@@ -103,7 +103,7 @@ WHERE akcija > 0;
 CREATE VIEW Vidutine_prekes_kaina
 AS SELECT ROUND(AVG(kaina), 2) as "Vidutine prekes kaina" FROM Preke;
 
-CREATE FUNCTION tikrinti_prekiu_kieki()
+CREATE FUNCTION tikrinti_prekiu_kieki_insert()
 RETURNS TRIGGER AS $$
 BEGIN
     IF ((
@@ -118,12 +118,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE FUNCTION tikrinti_prekiu_kieki_update()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF ((
+        SELECT COUNT(*) FROM Krepselis
+        WHERE uzsakymo_id = new.uzsakymo_id
+        ) > 5)
+    THEN
+        RAISE EXCEPTION 'Per daug prekiu krepselyje';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER patikrinti_ar_nevirsija_insert
 BEFORE INSERT ON Krepselis
 FOR EACH ROW
-EXECUTE FUNCTION tikrinti_prekiu_kieki();
+EXECUTE FUNCTION tikrinti_prekiu_kieki_insert();
 
 CREATE TRIGGER patikrinti_ar_nevirsija_update
 BEFORE UPDATE ON Krepselis
 FOR EACH ROW
-EXECUTE FUNCTION tikrinti_prekiu_kieki();
+EXECUTE FUNCTION tikrinti_prekiu_kieki_update();
