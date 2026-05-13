@@ -8,14 +8,34 @@ char pass[] = "testas";
 EXEC SQL END DECLARE SECTION;
 
 
-int main() {
 
+
+int main() {
     EXEC SQL CONNECT TO :db USER :user USING :pass;
 
     if (sqlca.sqlcode == 0) {
-        printf("Connected successfully!\n");
+        printf("Sekmingai prisijungta prie duomenu bazes %s!\n", db);
     } else {
-        printf("Connection failed: %d\n", sqlca.sqlcode);
+        printf("Nepavyko prisijungti prie duomenu bazes\n");
+    }
+
+    char* choices[] = {"Ivesti nauja preke", "Istrinti esama preke", "Atnaujinti esama preke"};
+    int n = sizeof(choices) / sizeof(choices[0]);
+
+    int choice, c;
+    while(1){
+        for(int i = 0; i < n; ++i){
+            printf("%d. %s\n", i + 1, choices[i]);
+        }
+
+        printf("Iveskite savo parinkti: ");
+        int errorCheck = scanf("%d", &choice);
+
+        if(errorCheck == 0 || choice > n || choice < 1){
+            printf("Prasome ivesti skaiciu nuo 1 iki %d!\n", n);
+        }
+
+        while ((c = getchar()) != '\n' && c != EOF) { }
     }
 
     EXEC SQL DISCONNECT ALL;
