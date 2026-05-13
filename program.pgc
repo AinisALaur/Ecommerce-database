@@ -11,8 +11,83 @@ void updateProduct(){
 
 }
 
+int checkId(short *ids, int id, int size){
+    for(int i = 0; i < size; ++i){
+        if (*(ids + i) == id){
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void deleteProduct(){
-    
+    short ids[1000];
+    int i = 0;
+
+    EXEC SQL BEGIN DECLARE SECTION;
+    char name[51];
+    char category[51];
+    short id;
+    EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL WHENEVER SQLERROR GOTO error;
+    EXEC SQL WHENEVER NOT FOUND GOTO finished;
+
+    EXEC SQL DECLARE curs CURSOR FOR
+        SELECT id, pavadinimas, kategorija FROM Preke;
+
+    EXEC SQL OPEN curs;
+
+    printf("Esamu prekiu sarasas: \n");
+    while (1) {
+        EXEC SQL FETCH curs INTO :id, :name, :category;
+        ids[i++] = id;
+        printf("%d %s %s\n", id, name, category);
+    }
+
+    EXEC SQL CLOSE curs;
+
+    error:
+        printf("SQL klaida: %ld\n", SQLCODE);
+        return;
+
+    finished:
+        EXEC SQL WHENEVER SQLERROR CONTINUE;
+        EXEC SQL WHENEVER NOT FOUND CONTINUE;
+        EXEC SQL CLOSE curs;
+        EXEC SQL CONNECT RESET;
+
+    EXEC SQL BEGIN DECLARE SECTION;
+    int deleteId;
+    EXEC SQL END DECLARE SECTION;
+
+    int error, c;
+    printf("0 Atsaukti\n");
+
+    while(1){
+        printf("Iveskite prekes ID, kuria noretumete istrinti: ");
+        error = scanf("%d", &deleteId);
+
+        if(deleteId == 0){
+            return;
+        }
+
+        if(error == 0 || checkId(ids, deleteId, i + 1) == 0){
+            printf("Toks ID neegzistuoja arba negalimas\n");
+        }else{
+            break;
+        }
+        while ((c = getchar()) != '\n' && c != EOF) { }
+    }
+
+    EXEC SQL DELETE FROM Preke WHERE id = :deleteId;
+
+    if (sqlca.sqlcode == 0){
+        EXEC SQL COMMIT;
+        printf("Duomenys sekmingai istrinti\n");
+    }else{
+        printf("Duomenu istrinti nepavyko, bandykite is naujo\n");
+    }
 }
 
 void addProduct(){
@@ -90,10 +165,10 @@ void addProduct(){
     EXEC SQL INSERT INTO Preke (pavadinimas, kategorija, kaina, akcija, sukure_admin, likutis)
         VALUES(:name, :category, :price, :discount, :adminId, :units);
     
-    if (sqlca.sqlcode < 0){
-        printf("Duomenu ivesti nepavyko, bandykite isnaujo\n");
+    if (sqlca.sqlcode == 100){
+        printf("Duomenu ivesti nepavyko, bandykite is naujo\n");
     }
-    if (sqlca.sqlcode == 0){
+    else if (sqlca.sqlcode == 0){
         EXEC SQL COMMIT;
         printf("Duomenys sekmingai ivesti\n");
     }
@@ -127,6 +202,10 @@ int main() {
 
         if(choice == 1){
             addProduct();
+        }
+
+        if(choice == 2){
+            deleteProduct();
         }
 
         if(choice == 4){
