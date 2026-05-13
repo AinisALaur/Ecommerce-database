@@ -1,0 +1,24 @@
+#include<stdio.h>
+#include <libpq-fe.h>
+
+EXEC SQL BEGIN DECLARE SECTION;
+char db[] = "eshop";
+char user[] = "postgres";
+char pass[] = "testas";
+EXEC SQL END DECLARE SECTION;
+
+
+int main() {
+
+    EXEC SQL CONNECT TO :db USER :user USING :pass;
+
+    if (sqlca.sqlcode == 0) {
+        printf("Connected successfully!\n");
+    } else {
+        printf("Connection failed: %d\n", sqlca.sqlcode);
+    }
+
+    EXEC SQL DISCONNECT ALL;
+
+    return 0;
+}
