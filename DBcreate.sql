@@ -9,8 +9,8 @@ CREATE TABLE Administratorius(
 CREATE TABLE Preke(
     id INTEGER PRIMARY KEY
         GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
-    pavadinimas VARCHAR(20) not null,
-    kategorija VARCHAR(20) not null,
+    pavadinimas VARCHAR(50) not null,
+    kategorija VARCHAR(50) not null,
     kaina DECIMAL(10, 2) not null,
     akcija DECIMAL(5, 2) default 0,
     sukure_admin SMALLINT not null,
