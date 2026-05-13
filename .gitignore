@@ -3,3 +3,5 @@
 DBquery.sql
 *.o
 *.exe
+*.c
+*.vscode
