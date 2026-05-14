@@ -1,5 +1,8 @@
 #include<stdio.h>
-#include <libpq-fe.h>
+
+// TODO: add defines, make code less repetitive
+
+#define STRLEN 50
 
 EXEC SQL BEGIN DECLARE SECTION;
 char db[] = "eshop";
@@ -44,6 +47,48 @@ int printList(short *ids, int *size){
         return 0;
 }
 
+void enterString(char str[], char txt[]){
+    int c;
+    while(1){
+        printf("%s", txt);
+        scanf(" %[^\n]", str);
+        if(strlen(str) <= STRLEN && strlen(str) > 0){
+            break;
+        }else{
+            printf("Netinkamas ivesties ilgis\n");
+        }
+        while ((c = getchar()) != '\n' && c != EOF) { }
+    }
+}
+
+void enterInt(int *integer, char txt[]){
+    int c, error;
+    while(1){
+        printf("%s", txt);
+        error = scanf("%d", integer);
+        if(error == 0){
+            printf("Netinkama ivestis\n");
+        }else{
+            break;
+        }
+        while ((c = getchar()) != '\n' && c != EOF) { }
+    }
+}
+
+void enterDbl(double *num, char txt[]){
+    int c, error;
+    while(1){
+        printf("%s", txt);
+        error = scanf("%lf", num);
+        if(error == 0){
+            printf("Netinkama ivestis\n");
+        }else{
+            break;
+        }
+        while ((c = getchar()) != '\n' && c != EOF) { }
+    }
+}
+
 int checkId(short *ids, int id, int size){
     for(int i = 0; i < size; ++i){
         if (*(ids + i) == id){
@@ -65,21 +110,17 @@ void updateProduct(){
     int updateId;
     EXEC SQL END DECLARE SECTION;
 
-    int error, c;
     while(1){
-        printf("Iveskite prekes ID, kuria noretumete atnaujinti: ");
-        error = scanf("%d", &updateId);
-
+        enterInt(&updateId, "Iveskite prekes ID, kuria noretumete atnaujinti: ");
         if(updateId == 0){
             return;
         }
-
-        if(error == 0 || checkId(ids, updateId, i + 1) == 0){
-            printf("Toks ID neegzistuoja arba negalimas\n");
+        
+        if(checkId(ids, updateId, i + 1) == 0){
+            printf("Neegzistuoja toks ID\n");
         }else{
             break;
         }
-        while ((c = getchar()) != '\n' && c != EOF) { }
     }
 
     char *atributai[] = {"Pavadinimas", "Kategorija", "Kaina", "Akcija", "Sukure admin", "Likutis"};
@@ -90,15 +131,13 @@ void updateProduct(){
         for(int i = 0; i < n; ++i){
             printf("%d. %s\n", i + 1, atributai[i]);
         }
-        printf("Pasirinkite, koki atributa noretumete pakeisti: ");
-        error = scanf("%d", &attributeId);
-
-        if(error == 0){
-            printf("Toks atributo nr. neegzistuoja\n");
+        enterInt(&attributeId, "Pasirinkite, koki atributa noretumete pakeisti: ");
+        
+        if(attributeId > n || attributeId < 0){
+            printf("Neegzistuoja toks atributas\n");
         }else{
             break;
-        }
-        while ((c = getchar()) != '\n' && c != EOF) { }
+        } 
     }
 
     EXEC SQL BEGIN DECLARE SECTION;
@@ -106,101 +145,48 @@ void updateProduct(){
     char category[51];
     double price;
     double discount;
-    short adminId;
+    int adminId;
     int units;
     EXEC SQL END DECLARE SECTION;
 
+
     if(attributeId == 1){
-        while(1){
-            printf("Iveskite nauja prekes pavadinima: ");
-            scanf(" %[^\n]", name);
-            if(strlen(name) <= 50 && strlen(name) > 0){
-                break;
-            }else{
-                printf("Prekes pavadinimas per ilgas\n");
-            }
-            while ((c = getchar()) != '\n' && c != EOF) { }
-        }
-        EXEC SQL UPDATE Preke SET pavadinimas = :name WHERE id = :updateId;
+        enterString(name, "Iveskite nauja prekes pavadinima: ");
+        EXEC SQL UPDATE Preke SET Pavadinimas = :name WHERE id = :updateId;
     }
 
     if(attributeId == 2){
-        while(1){
-            printf("Iveskite nauja prekes kategorija: ");
-            scanf(" %[^\n]", category);
-            if(strlen(category) <= 50){
-                break;
-            }else{
-                printf("Kategorijos pavadinimas per ilgas\n");
-            }
-            while ((c = getchar()) != '\n' && c != EOF) { }
-        }
+        enterString(category, "Iveskite nauja prekes kategorija: ");
         EXEC SQL UPDATE Preke SET kategorija = :category WHERE id = :updateId;
     }
 
     if(attributeId == 3){
-        while (1){
-            printf("Iveskite nauja prekes kaina: ");
-            error = scanf("%lf", &price);
-
-            if(error == 0){
-                printf("Netinkama prekes kaina!\n");
-            }else{
-                break;
-            }
-            while ((c = getchar()) != '\n' && c != EOF) { }
-        }
+        enterDbl(&price, "Iveskite nauja prekes kaina: ");
         EXEC SQL UPDATE Preke SET kaina = :price WHERE id = :updateId;
     }
-
     
     if(attributeId == 4){
-        while (1){
-            printf("Iveskite nauja prekes akcija: ");
-            error = scanf("%lf", &discount);
-
-            if(error == 0){
-                printf("Netinkama prekes akcija!\n");
-            }else{
-                break;
-            }
-            while ((c = getchar()) != '\n' && c != EOF) { }
-        }
+        enterDbl(&discount, "Iveskite nauja prekes akcija: ");
         EXEC SQL UPDATE Preke SET akcija = :discount WHERE id = :updateId;
     }
 
     
     if(attributeId == 5){
-        while (1){
-            printf("Iveskite nauja prekes admino id: ");
-            error = scanf("%d", &adminId);
-
-            if(error == 0){
-                printf("Netinkamas admino id!\n");
+        while(1){
+            enterInt(&adminId, "Iveskite nauja prekes admino id: ");
+            if(checkId(ids, adminId, i + 1) == 0){
+                printf("Neegzistuoja toks ID\n");
             }else{
                 break;
             }
-            while ((c = getchar()) != '\n' && c != EOF) { }
         }
         EXEC SQL UPDATE Preke SET sukure_admin = :adminId WHERE id = :updateId;
     } 
     
     if(attributeId == 6){
-        while (1){
-            printf("Iveskite nauja prekes likuti: ");
-            error = scanf("%d", &units);
-
-            if(error == 0){
-                printf("Netinkama prekes likutis!\n");
-            }else{
-                break;
-            }
-            while ((c = getchar()) != '\n' && c != EOF) { }
-        }
-
+        enterInt(&units, "Iveskite nauja prekes likuti: ");
         EXEC SQL UPDATE Preke SET likutis = :units WHERE id = :updateId;
     }
-
 
     if (sqlca.sqlcode == 0){
         EXEC SQL COMMIT;
@@ -208,7 +194,6 @@ void updateProduct(){
     }else{
         printf("Duomenu atnaujinti nepavyko, bandykite is naujo\n");
     }
-
 }
 
 void deleteProduct(){
@@ -222,22 +207,18 @@ void deleteProduct(){
     EXEC SQL BEGIN DECLARE SECTION;
     int deleteId;
     EXEC SQL END DECLARE SECTION;
-    int error, c;
 
     while(1){
-        printf("Iveskite prekes ID, kuria noretumete istrinti: ");
-        error = scanf("%d", &deleteId);
-
+        enterInt(&deleteId, "Iveskite prekes ID, kuria noretumete istrinti: ");
         if(deleteId == 0){
             return;
         }
 
-        if(error == 0 || checkId(ids, deleteId, i + 1) == 0){
-            printf("Toks ID neegzistuoja arba negalimas\n");
+        if(checkId(ids, deleteId, i + 1) == 0){
+            printf("Neegzistuoja toks ID\n");
         }else{
             break;
         }
-        while ((c = getchar()) != '\n' && c != EOF) { }
     }
 
     EXEC SQL DELETE FROM Preke WHERE id = :deleteId;
@@ -260,62 +241,12 @@ void addProduct(){
     int units;
     EXEC SQL END DECLARE SECTION;
 
-    int error, c, size;
-    while ((c = getchar()) != '\n' && c != EOF) { }
-
-    printf("Iveskite prekes pavadinima: ");
-    scanf(" %50[^\n]", name);
-
-    printf("Iveskite prekes kategorija: ");
-    scanf(" %50[^\n]", category);
-
-    while (1){
-        printf("Iveskite prekes kaina: ");
-        error = scanf("%lf", &price);
-
-        if(error == 0){
-            printf("Netinkama prekes kaina!\n");
-        }else{
-            break;
-        }
-        while ((c = getchar()) != '\n' && c != EOF) { }
-    }
-
-    while (1){
-        printf("Iveskite prekei taikoma akcija: ");
-        error = scanf("%lf", &discount);
-
-        if(error == 0){
-            printf("Netinkama akcija!\n");
-        }else{
-            break;
-        }
-        while ((c = getchar()) != '\n' && c != EOF) { }
-    }
-
-    while (1){
-        printf("Nurodykite admino ID, kuris kuria sia preke: ");
-        error = scanf("%d", &adminId);
-
-        if(error == 0){
-            printf("Netinkamas admino ID!\n");
-        }else{
-            break;
-        }
-        while ((c = getchar()) != '\n' && c != EOF) { }
-    }
-
-    while (1){
-        printf("Nurodykite prekes likuti: ");
-        error = scanf("%d", &units);
-
-        if(error == 0){
-            printf("Netinkamas prekes likutis!\n");
-        }else{
-            break;
-        }
-        while ((c = getchar()) != '\n' && c != EOF) { }
-    }
+    enterString(name, "Iveskite prekes pavadinima: ");
+    enterString(category, "Iveskite kategorijos pavadinima: ");
+    enterDbl(&price, "Iveskite prekes kaina: ");
+    enterDbl(&discount, "Iveskite prekei taikoma akcija: ");
+    enterInt(&adminId, "Nurodykite admino ID, kuris kuria sia preke: ");
+    enterInt(&units, "Nurodykite prekes likuti: ");
 
     EXEC SQL INSERT INTO Preke (pavadinimas, kategorija, kaina, akcija, sukure_admin, likutis)
         VALUES(:name, :category, :price, :discount, :adminId, :units);
@@ -347,10 +278,9 @@ int main() {
             printf("%d. %s\n", i + 1, choices[i]);
         }
 
-        printf("Iveskite savo parinkti: ");
-        int errorCheck = scanf("%d", &choice);
+        enterInt(&choice, "Iveskite savo parinkti: ");
 
-        if(errorCheck == 0 || choice > n || choice < 1){
+        if(choice > n || choice < 1){
             printf("Prasome ivesti skaiciu nuo 1 iki %d!\n", n);
         }
 
