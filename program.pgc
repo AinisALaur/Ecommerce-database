@@ -15,27 +15,34 @@ int printList(short *ids, int *size){
     char name[51];
     char category[51];
     short id;
+    double price;
+    double discount;
+    short sukureAdmin;
+    int units;
     EXEC SQL END DECLARE SECTION;
 
     EXEC SQL WHENEVER SQLERROR GOTO error;
     EXEC SQL WHENEVER NOT FOUND GOTO finished;
 
     EXEC SQL DECLARE curs CURSOR FOR
-        SELECT id, pavadinimas, kategorija FROM Preke;
+        SELECT id, pavadinimas, kategorija, kaina, akcija, sukure_admin, likutis FROM Preke;
 
     EXEC SQL OPEN curs;
 
-    printf("Esamu prekiu sarasas: \n");
-    printf("0 Atsaukti\n");
+    printf("Esamu prekiu sarasas:\n");
+    printf("-------------------------------------------------------------------------------------------------\n");
+    printf("%-5s %-20s %-20s %-10s %-10s %-10s %-10s\n",
+        "ID", "Pavad.", "Kategorija", "Kaina", "Akcija", "Admin", "Likutis");
+    printf("-------------------------------------------------------------------------------------------------\n");
     while (1) {
-        EXEC SQL FETCH curs INTO :id, :name, :category;
+        EXEC SQL FETCH curs INTO :id, :name, :category, :price, :discount, :sukureAdmin, :units;
         ids[(*size)++] = id;
-        printf("%d %s %s\n", id, name, category);
+        printf("%-5d %-20s %-20s %-10.2f %-10.2f %-10d %-10d\n",
+           id, name, category, price, discount, sukureAdmin, units);
     }
 
-    EXEC SQL CLOSE curs;
-
     error:
+        EXEC SQL CLOSE curs;
         printf("SQL klaida: %ld\n", SQLCODE);
         return -1;
 
@@ -105,7 +112,7 @@ void updateProduct(){
     if(printList(ids, &i) == -1){
         return;
     }
-
+    printf("0     Atsaukti\n");
     EXEC SQL BEGIN DECLARE SECTION;
     int updateId;
     EXEC SQL END DECLARE SECTION;
@@ -203,6 +210,7 @@ void deleteProduct(){
     if(printList(ids, &i) == -1){
         return;
     }
+    printf("0     Atsaukti\n");
 
     EXEC SQL BEGIN DECLARE SECTION;
     int deleteId;
@@ -269,10 +277,12 @@ int main() {
         printf("Nepavyko prisijungti prie duomenu bazes\n");
     }
 
-    char *choices[] = {"Ivesti nauja preke", "Istrinti esama preke", "Atnaujinti esama preke", "Baigti darba"};
+    char *choices[] = {"Ivesti nauja preke", "Istrinti esama preke", "Atnaujinti esama preke", "Perziureti visas prekes", "Baigti darba"};
     int n = sizeof(choices) / sizeof(choices[0]);
 
     int choice, c;
+    short ids[200];
+    int i =0;
     while(1){
         for(int i = 0; i < n; ++i){
             printf("%d. %s\n", i + 1, choices[i]);
@@ -297,6 +307,10 @@ int main() {
         }
 
         if(choice == 4){
+            printList(ids, &i);
+        }
+
+        if(choice == 5){
             break;
         }
 
