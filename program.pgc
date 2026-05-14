@@ -1,6 +1,6 @@
 #include<stdio.h>
 
-// TODO: add defines, make code less repetitive
+// TODO: if error occurs it should continue working with other queries
 
 #define STRLEN 50
 
@@ -268,6 +268,94 @@ void addProduct(){
     }
 }
 
+void addToOrders(){
+    EXEC SQL BEGIN DECLARE SECTION;
+    int customerId;
+    int productId;
+    int units;
+    double price;
+    int stock;
+    int orderId;
+    EXEC SQL END DECLARE SECTION;
+
+    // EXEC SQL WHENEVER SQLERROR GOTO error;
+    // EXEC SQL WHENEVER NOT FOUND GOTO finished;
+
+    enterInt(&customerId, "Iveskite kliento ID: ");
+    enterInt(&productId, "Iveskite prekes ID: ");
+    enterInt(&units, "Iveskite prekes kieki: ");
+
+    EXEC SQL SET AUTOCOMMIT = OFF;
+    EXEC SQL SELECT likutis, kaina
+        INTO :stock, :price
+        FROM Preke
+        WHERE id = :productId;
+
+    if (sqlca.sqlcode != 0) {
+        printf("Preke nerasta.\n");
+        EXEC SQL ROLLBACK;
+        return;
+    }
+
+    if (stock < units){
+        printf("Neuztenka prekiu sandelyje.\n");
+        EXEC SQL ROLLBACK;
+        return;
+    }
+
+    EXEC SQL INSERT INTO Uzsakymas
+        (uzsakovo_id, pateikimo_data)
+        VALUES
+        (:customerId, CURRENT_TIMESTAMP);
+
+    if (sqlca.sqlcode != 0) {
+        printf("Nepavyko sukurti uzsakymo.\n");
+        EXEC SQL ROLLBACK;
+        return;
+    }
+
+    EXEC SQL SELECT MAX(ID)
+        INTO :orderId
+        FROM Uzsakymas;
+
+    EXEC SQL INSERT INTO Krepselis
+        (prekes_id, uzsakymo_id, kiekis, dabartine_kaina)
+        VALUES
+        (:productId, :orderId, :units, :price);
+
+    if (sqlca.sqlcode != 0) {
+        printf("Nepavyko prideti i krepseli.\n");
+        EXEC SQL ROLLBACK;
+        return;
+    }
+
+    EXEC SQL UPDATE Preke
+        SET likutis = likutis - :units
+        WHERE id = :productId;
+
+    if (sqlca.sqlcode != 0) {
+        printf("Nepavyko atnaujinti likucio.\n");
+        EXEC SQL ROLLBACK;
+        return;
+    }
+
+    EXEC SQL COMMIT;
+    EXEC SQL SET AUTOCOMMIT = ON;
+
+    // error:
+    //     EXEC SQL ROLLBACK;
+    //     EXEC SQL SET AUTOCOMMIT = ON;
+    //     printf("SQL klaida: %ld\n", SQLCODE);
+    //     return;
+
+    // finished:
+    //     EXEC SQL SET AUTOCOMMIT = ON;
+    //     EXEC SQL WHENEVER SQLERROR CONTINUE;
+    //     EXEC SQL WHENEVER NOT FOUND CONTINUE;
+    //     EXEC SQL CONNECT RESET;
+    //     return;
+}
+
 int main() {
     EXEC SQL CONNECT TO :db USER :user USING :pass;
 
@@ -277,7 +365,12 @@ int main() {
         printf("Nepavyko prisijungti prie duomenu bazes\n");
     }
 
-    char *choices[] = {"Ivesti nauja preke", "Istrinti esama preke", "Atnaujinti esama preke", "Perziureti visas prekes", "Baigti darba"};
+    char *choices[] = {"Ivesti nauja preke", 
+                       "Istrinti esama preke",
+                       "Atnaujinti esama preke", 
+                       "Perziureti visas prekes",
+                       "Prideti nauja uzsakyma",
+                       "Baigti darba"};
     int n = sizeof(choices) / sizeof(choices[0]);
 
     int choice, c;
@@ -311,6 +404,10 @@ int main() {
         }
 
         if(choice == 5){
+            addToOrders();
+        }
+
+        if(choice == 6){
             break;
         }
 
