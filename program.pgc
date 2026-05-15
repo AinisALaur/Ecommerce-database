@@ -1,8 +1,7 @@
 #include<stdio.h>
 
-// TODO: if error occurs it should continue working with other queries
-
 #define STRLEN 50
+#define SQLCODE sqlca.sqlcode
 
 EXEC SQL BEGIN DECLARE SECTION;
 char db[] = "eshop";
@@ -10,7 +9,7 @@ char user[] = "postgres";
 char pass[] = "testas";
 EXEC SQL END DECLARE SECTION;
 
-int printList(short *ids, int *size){
+void printList(short *ids, int *size){
     EXEC SQL BEGIN DECLARE SECTION;
     char name[51];
     char category[51];
@@ -42,16 +41,11 @@ int printList(short *ids, int *size){
     }
 
     error:
-        EXEC SQL CLOSE curs;
-        printf("SQL klaida: %ld\n", SQLCODE);
-        return -1;
-
+        printf("SQL klaida: %d\n", SQLCODE);
     finished:
+        EXEC SQL CLOSE curs;
         EXEC SQL WHENEVER SQLERROR CONTINUE;
         EXEC SQL WHENEVER NOT FOUND CONTINUE;
-        EXEC SQL CLOSE curs;
-        EXEC SQL CONNECT RESET;
-        return 0;
 }
 
 void enterString(char str[], char txt[]){
@@ -109,10 +103,9 @@ void updateProduct(){
     short ids[1000];
     int i = 0;
 
-    if(printList(ids, &i) == -1){
-        return;
-    }
+    printList(ids, &i);
     printf("0     Atsaukti\n");
+    printf("-------------------------------------------------------------------------------------------------\n");
     EXEC SQL BEGIN DECLARE SECTION;
     int updateId;
     EXEC SQL END DECLARE SECTION;
@@ -156,6 +149,8 @@ void updateProduct(){
     int units;
     EXEC SQL END DECLARE SECTION;
 
+    EXEC SQL WHENEVER SQLERROR GOTO error;
+    EXEC SQL WHENEVER NOT FOUND GOTO finished;
 
     if(attributeId == 1){
         enterString(name, "Iveskite nauja prekes pavadinima: ");
@@ -195,22 +190,25 @@ void updateProduct(){
         EXEC SQL UPDATE Preke SET likutis = :units WHERE id = :updateId;
     }
 
-    if (sqlca.sqlcode == 0){
-        EXEC SQL COMMIT;
-        printf("Duomenys sekmingai atnaujinti\n");
-    }else{
-        printf("Duomenu atnaujinti nepavyko, bandykite is naujo\n");
-    }
+    printf("Sekmingai atnaujinta\n");
+    goto finished;
+
+    error:
+        EXEC SQL ROLLBACK;
+        printf("SQL klaida: %d\n", SQLCODE);
+    finished:
+        EXEC SQL WHENEVER SQLERROR CONTINUE;
+        EXEC SQL WHENEVER NOT FOUND CONTINUE;
 }
 
 void deleteProduct(){
     short ids[1000];
     int i = 0;
 
-    if(printList(ids, &i) == -1){
-        return;
-    }
+    printList(ids, &i);
     printf("0     Atsaukti\n");
+    printf("-------------------------------------------------------------------------------------------------\n");
+
 
     EXEC SQL BEGIN DECLARE SECTION;
     int deleteId;
@@ -231,7 +229,7 @@ void deleteProduct(){
 
     EXEC SQL DELETE FROM Preke WHERE id = :deleteId;
 
-    if (sqlca.sqlcode == 0){
+    if (SQLCODE == 0){
         EXEC SQL COMMIT;
         printf("Duomenys sekmingai istrinti\n");
     }else{
@@ -256,16 +254,18 @@ void addProduct(){
     enterInt(&adminId, "Nurodykite admino ID, kuris kuria sia preke: ");
     enterInt(&units, "Nurodykite prekes likuti: ");
 
+    EXEC SQL WHENEVER SQLERROR GOTO error;
+    EXEC SQL WHENEVER NOT FOUND GOTO finished;
+
     EXEC SQL INSERT INTO Preke (pavadinimas, kategorija, kaina, akcija, sukure_admin, likutis)
         VALUES(:name, :category, :price, :discount, :adminId, :units);
     
-    if (sqlca.sqlcode == 100){
-        printf("Duomenu ivesti nepavyko, bandykite is naujo\n");
-    }
-    else if (sqlca.sqlcode == 0){
-        EXEC SQL COMMIT;
-        printf("Duomenys sekmingai ivesti\n");
-    }
+    error:
+        printf("SQL klaida: %d\n", SQLCODE);
+        EXEC SQL ROLLBACK;
+    finished:
+        EXEC SQL WHENEVER SQLERROR CONTINUE;
+        EXEC SQL WHENEVER NOT FOUND CONTINUE;
 }
 
 void addToOrders(){
@@ -278,9 +278,6 @@ void addToOrders(){
     int orderId;
     EXEC SQL END DECLARE SECTION;
 
-    // EXEC SQL WHENEVER SQLERROR GOTO error;
-    // EXEC SQL WHENEVER NOT FOUND GOTO finished;
-
     enterInt(&customerId, "Iveskite kliento ID: ");
     enterInt(&productId, "Iveskite prekes ID: ");
     enterInt(&units, "Iveskite prekes kieki: ");
@@ -291,7 +288,7 @@ void addToOrders(){
         FROM Preke
         WHERE id = :productId;
 
-    if (sqlca.sqlcode != 0) {
+    if (SQLCODE != 0) {
         printf("Preke nerasta.\n");
         EXEC SQL ROLLBACK;
         return;
@@ -308,7 +305,7 @@ void addToOrders(){
         VALUES
         (:customerId, CURRENT_TIMESTAMP);
 
-    if (sqlca.sqlcode != 0) {
+    if (SQLCODE != 0) {
         printf("Nepavyko sukurti uzsakymo.\n");
         EXEC SQL ROLLBACK;
         return;
@@ -323,7 +320,7 @@ void addToOrders(){
         VALUES
         (:productId, :orderId, :units, :price);
 
-    if (sqlca.sqlcode != 0) {
+    if (SQLCODE != 0) {
         printf("Nepavyko prideti i krepseli.\n");
         EXEC SQL ROLLBACK;
         return;
@@ -333,7 +330,7 @@ void addToOrders(){
         SET likutis = likutis - :units
         WHERE id = :productId;
 
-    if (sqlca.sqlcode != 0) {
+    if (SQLCODE != 0) {
         printf("Nepavyko atnaujinti likucio.\n");
         EXEC SQL ROLLBACK;
         return;
@@ -341,25 +338,13 @@ void addToOrders(){
 
     EXEC SQL COMMIT;
     EXEC SQL SET AUTOCOMMIT = ON;
-
-    // error:
-    //     EXEC SQL ROLLBACK;
-    //     EXEC SQL SET AUTOCOMMIT = ON;
-    //     printf("SQL klaida: %ld\n", SQLCODE);
-    //     return;
-
-    // finished:
-    //     EXEC SQL SET AUTOCOMMIT = ON;
-    //     EXEC SQL WHENEVER SQLERROR CONTINUE;
-    //     EXEC SQL WHENEVER NOT FOUND CONTINUE;
-    //     EXEC SQL CONNECT RESET;
-    //     return;
+    printf("Uzsakymas sekmingas pateiktas\n");
 }
 
 int main() {
     EXEC SQL CONNECT TO :db USER :user USING :pass;
 
-    if (sqlca.sqlcode == 0) {
+    if (SQLCODE == 0) {
         printf("Sekmingai prisijungta prie duomenu bazes %s!\n", db);
     } else {
         printf("Nepavyko prisijungti prie duomenu bazes\n");
@@ -375,8 +360,8 @@ int main() {
 
     int choice, c;
     short ids[200];
-    int i =0;
     while(1){
+        int i = 0;
         for(int i = 0; i < n; ++i){
             printf("%d. %s\n", i + 1, choices[i]);
         }
@@ -401,6 +386,7 @@ int main() {
 
         if(choice == 4){
             printList(ids, &i);
+            printf("-------------------------------------------------------------------------------------------------\n");
         }
 
         if(choice == 5){
@@ -415,6 +401,5 @@ int main() {
     }
 
     EXEC SQL DISCONNECT ALL;
-
     return 0;
 }
